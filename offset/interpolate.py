@@ -62,16 +62,20 @@ def interpolate_offset(argv):
     xo = []
     yo = []
     zo = []
+    #print '[debug]: ndays=', args.nDays
     query = ['NOSID', 'NWSID', 'Lon', 'Lat', '7','6','5','4','3','2','1']
+    if args.nDays == '0':
+        query = ['NOSID', 'NWSID', 'Lon', 'Lat', '0']
     master = csdlpy.obs.parse.stationsList (args.inputFile, query)
     for m in master:
+        #print '[debug]: m=', m
         xd = float(m[query.index('Lon')])
         yd = float(m[query.index('Lat')])
-        zd = float(m[query.index(args.nDays)])
-        if xlim[0] <= xd and xd <= xlim[1] and ylim[0] <= yd and yd <= ylim[1]:
+        zd = m[query.index(args.nDays)]
+        if not zd=='nan' and xlim[0] <= xd and xd <= xlim[1] and ylim[0] <= yd and yd <= ylim[1]:
             xo.append(xd)
             yo.append(yd)
-            zo.append(zd)
+            zo.append(float(zd))
     print '[info]: data points selected within the grid coverage : ' + str(len(xo))
     
     timestamp()
@@ -83,10 +87,17 @@ def interpolate_offset(argv):
     with open(args.inputFile) as f:
         header = f.readline()
     datestr = header.split(',')[-2].split(':')[-1]
-    endDate   = datetime.datetime.strptime(datestr, '%Y%m%d')
-    startDate = endDate - dt(days=int(args.nDays))
-    plotTitle = args.nDays + ' DAYS:' + \
+    if len(datestr)==8:
+        endDate   = datetime.datetime.strptime(datestr, '%Y%m%d')
+        startDate = endDate - dt(days=int(args.nDays))
+        plotTitle = args.nDays + ' DAYS:' + \
                 startDate.strftime('%Y%m%d') +'--'+ endDate.strftime('%Y%m%d')
+
+    if len(datestr)>=10:
+       endDate   = datetime.datetime.strptime(datestr, '%Y%m%d%H%M') + dt(minutes=12)
+       startDate = datetime.datetime.strptime(datestr, '%Y%m%d%H%M') - dt(minutes=12) 
+       plotTitle = args.nDays + ' DATE:' + \
+                startDate.strftime('%Y%m%d %H:%M') +'--'+ endDate.strftime('%Y%m%d %H:%M')
 
     if len(xo)>0:
         #Prep interpolation

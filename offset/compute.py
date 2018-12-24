@@ -51,15 +51,26 @@ def compute_offset(argv):
     print '[info]: Number of active stations: ' +str(len(active['nos_id']))
 
     #Set up date span
-    dates = [datetime.datetime.strptime(args.endDate,"%Y%m%d") \
+    # If args.endDate is specified with hours, take quazi-instantaneous values
+    isInstantaneous = False
+    if len(args.endDate) == 10:
+        dates = [datetime.datetime.strptime(args.endDate,"%Y%m%d%H")+dt(minutes=12), \
+                 datetime.datetime.strptime(args.endDate,"%Y%m%d%H")-dt(minutes=12)]
+        MAXNDAYS=0
+        isInstantaneous = True
+    else:    
+        dates = [datetime.datetime.strptime(args.endDate,"%Y%m%d") \
                       - dt(days=x) for x in range(0,MAXNDAYS)]
  
+
     myDays   = range(MAXNDAYS,0,-1) # 7,6,5,4,3,2,1
     myBiases = np.zeros([len(active['nos_id']),MAXNDAYS], dtype=float)
 
     fid = open(args.outputFile, 'w')
     header = 'NOSID,NWSID,Lon,Lat,' + \
               ','.join(str(e) for e in myDays) + ', valid:' + args.endDate + ',\n'
+    if isInstantaneous:
+        header='NOSID,NWSID,Lon,Lat,0, valid:' + args.endDate + ',\n'
     fid.write( header )
 
     #Retrieve obs, compute biases
@@ -72,17 +83,21 @@ def compute_offset(argv):
  
         try:
             sline    = nosid + ',' + nwsid + ',' + lon + ',' + lat + ','
+            print sline
             data     = csdlpy.obs.coops.getData(nosid, [dates[-1], dates[0]], \
                                                 product='waterlevelrawsixmin')
             obsValues = data['values']
             obsDates  = data['dates']     
 
             # Compute offsets
-            for n in range(len(dates)-1,-1,-1):
-                d0              = min( obsDates, key=lambda x: abs(x-dates[n]))
-                indx            = obsDates.index(d0) 
-                myBiases[k,n]   = np.nanmean(obsValues[indx:])
-                sline           = sline + str(myBiases[k,n]) + ','
+            if isInstantaneous:
+                sline = sline + str (np.nanmean(obsValues)) + ','
+            else: 
+                for n in range(len(dates)-1,-1,-1):
+                    d0              = min( obsDates, key=lambda x: abs(x-dates[n]))
+                    indx            = obsDates.index(d0) 
+                    myBiases[k,n]   = np.nanmean(obsValues[indx:])
+                    sline           = sline + str(myBiases[k,n]) + ','
 
             fid.write(sline + '\n')
         except:
