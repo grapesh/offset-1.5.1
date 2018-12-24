@@ -11,12 +11,12 @@ export myModules=${platform}"/gpfs/hps3/nos/noscrub/nwprod/csdlpy-1.5.1"
 export pythonCode=${platform}"/gpfs/hps3/nos/noscrub/nwprod/offset-1.5.1/offset/compute.py"
 export logFile=${platform}"/gpfs/hps3/nos/noscrub/polar/offset/offset.log"
 
-export endDate="latest"   #"20180312"
-export outputFile=${platform}"/gpfs/hps3/nos/noscrub/polar/offset/latest_coops.csv"
+export endDate="2018101012"
+export outputFile=${platform}"/gpfs/hps3/nos/noscrub/polar/offset/coops_2018101012.csv"
 export tmpDir=${platform}"/gpfs/hps3/nos/noscrub/tmp/offset/"
 
 export ftpLogin="svinogradov@emcrzdm"
 export ftpPath="/home/ftp/polar/estofs/offset/"
 
 cd ${tmpDir}
-PYTHONPATH=${myModules} ${pyPath}/python -W ignore ${pythonCode} -z ${endDate} -o ${outputFile} -t ${tmpDir} -u ${ftpLogin} -f ${ftpPath}  > ${logFile}
+PYTHONPATH=${myModules} ${pyPath}/python -W ignore ${pythonCode} -z ${endDate} -o ${outputFile} -t ${tmpDir} -u ${ftpLogin} -f ${ftpPath} # > ${logFile}

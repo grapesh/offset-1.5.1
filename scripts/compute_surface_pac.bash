@@ -19,7 +19,7 @@ export outputFile=${platform}"/gpfs/hps3/nos/noscrub/polar/offset/pac/estofs.pac
 export tmpDir=${platform}"/gpfs/hps3/nos/noscrub/tmp/offset/pac"
 
 export ftpLogin="svinogradov@emcrzdm"
-export ftpPath="/home/ftp/polar/estofs/offset/"
+export ftpPath="/home/www/polar/estofs/offset/"
 
 cd ${tmpDir}
 PYTHONPATH=${myModules} ${pyPath}/python -W ignore ${pythonCode} -d ${NDAYS} -i ${inputFile} -o ${outputFile} -c ${pltCfgFile} -t ${tmpDir} -u ${ftpLogin} -f ${ftpPath} > ${logFile}
