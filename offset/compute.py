@@ -26,7 +26,8 @@ def read_cmd_argv (argv):
     parser.add_argument('-t','--tmpDir',         required=True)
     parser.add_argument('-u','--ftpLogin',       required=True)
     parser.add_argument('-f','--ftpPath',        required=True)
-    
+    parser.add_argument('-p','--dataTankPath',   required=False)
+
     args = parser.parse_args()           
     if 'latest' in args.endDate:
         args.endDate = datetime.datetime.utcnow().strftime("%Y%m%d")
@@ -34,9 +35,76 @@ def read_cmd_argv (argv):
     print '[info]: offset.compute.py is configured with :', args
     return args
 
+
+#==============================================================================
+# Reads data from datatank, computes offset
+#
+def compute_offset_datatank (argv):
+
+    MAXNDAYS = 7
+
+    #Receive command line arguments
+    args = read_cmd_argv(argv)
+
+    #Datatank folder
+    dataDir = args.dataTankPath + args.endDate + '/coops_waterlvlobs/'
+    print '[info]: Trying to read data from ', dataDir
+    xmlFiles = glob.glob(dataDir + '*.xml')
+    nfiles = len(xmlFiles)
+    if nfiles:
+        print '[info]: found ', str(nfiles), ' xml data files.'
+    else:
+        print '[error]: no xml data files found in ', dataDir
+
+   #Retrieve active stations list
+    active = csdlpy.obs.coops.getActiveStations(dataDir + 'active.html')
+    print '[info]: Number of active stations: ' +str(len(active['nos_id']))
+
+    #Set up date span
+    dates = [datetime.datetime.strptime(args.endDate,"%Y%m%d") \
+                      - dt(days=x) for x in range(0,MAXNDAYS)]
+
+    myDays   = range(MAXNDAYS,0,-1) # 7,6,5,4,3,2,1
+    myBiases = np.zeros([len(active['nos_id']),MAXNDAYS], dtype=float)
+
+    fid = open(args.outputFile, 'w')
+    header = 'NOSID,NWSID,Lon,Lat,' + \
+              ','.join(str(e) for e in myDays) + ', valid:' + args.endDate + ',\n'
+    fid.write( header )
+
+    #Retrieve obs, compute biases
+    for k in range(len(active['nos_id'])):
+
+        nosid = str(active['nos_id'][k])
+        nwsid = str(active['nws_id'][k])
+        lon   = str(active['lon'][k])
+        lat   = str(active['lat'][k])
+
+        try:
+            sline    = nosid + ',' + nwsid + ',' + lon + ',' + lat + ','
+            #print sline
+            data     = csdlpy.obs.coops.readData( dataDir + nosid + '.xml')
+            obsValues = data['values']
+            obsDates  = data['dates']
+
+            # Compute offsets
+            for n in range(len(dates)-1,-1,-1):
+                d0              = min( obsDates, key=lambda x: abs(x-dates[n]))
+                indx            = obsDates.index(d0)
+                myBiases[k,n]   = np.nanmean(obsValues[indx:])
+                sline           = sline + str(myBiases[k,n]) + ','
+
+            fid.write(sline + '\n')
+        except:
+            pass
+    #Save
+    fid.close()
+
+    #Upload
+#    csdlpy.transfer.upload(args.outputFile, args.ftpLogin, args.ftpPath)
     
 #==============================================================================
-def compute_offset(argv):
+def compute_offset_web (argv):
 
     MAXNDAYS = 7
 
@@ -111,10 +179,20 @@ def compute_offset(argv):
     #Cleanup
     csdlpy.transfer.cleanup(args.tmpDir)
  
-#==============================================================================    
+
+#==============================================================================
 if __name__ == "__main__":
 
     timestamp()
-    compute_offset (sys.argv[1:])
+    args = read_cmd_argv(sys.argv[1:])
+
+    if 'web' in args.dataTankPath:
+        print "[info]: water levels data to download from CO-OPS server"
+        compute_offset_web (sys.argv[1:])
+    else:
+        print "[info]: water levels data to read from datatank ", args.dataTankPath
+        compute_offset_datatank (sys.argv[1:])
+
     timestamp()
+
 
