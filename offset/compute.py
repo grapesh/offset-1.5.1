@@ -4,7 +4,7 @@
 @author: Sergey.Vinogradov@noaa.gov
 """
 import csdlpy
-import os, sys
+import os, sys, glob
 import argparse
 import numpy as np
 import datetime 
@@ -57,7 +57,7 @@ def compute_offset_datatank (argv):
         print '[error]: no xml data files found in ', dataDir
 
    #Retrieve active stations list
-    active = csdlpy.obs.coops.getActiveStations(dataDir + 'active.html')
+    active = csdlpy.obs.coops.getActiveStations(dataDir + 'active_coops_stations.html')
     print '[info]: Number of active stations: ' +str(len(active['nos_id']))
 
     #Set up date span
@@ -108,9 +108,6 @@ def compute_offset_web (argv):
 
     MAXNDAYS = 7
 
-    #sys.path.insert(0,os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))    
-    #from offset import plot
-    
     #Receive command line arguments
     args = read_cmd_argv(argv)
 
