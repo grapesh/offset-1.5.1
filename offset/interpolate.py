@@ -23,6 +23,7 @@ def read_cmd_argv (argv):
     
     parser.add_argument('-d','--nDays',          required=True)    
     parser.add_argument('-i','--inputFile',      required=True)
+    parser.add_argument('-e','--excludeList',    required=True)
     parser.add_argument('-o','--outputFile',     required=True)
     parser.add_argument('-c','--pltCfgFile',     required=True)
     parser.add_argument('-t','--tmpDir',         required=True)
@@ -66,13 +67,23 @@ def interpolate_offset(argv):
     query = ['NOSID', 'NWSID', 'Lon', 'Lat', '7','6','5','4','3','2','1']
     if args.nDays == '0':
         query = ['NOSID', 'NWSID', 'Lon', 'Lat', '0']
-    master = csdlpy.obs.parse.stationsList (args.inputFile, query)
+    print '[info]: Reading WL anomalies from ', args.inputFile
+    master = csdlpy.obs.parse.stationsList (args.inputFile,   query)
+
+    print '[info]: Reading stations to be excluded from ', args.excludeList
+    exclud = csdlpy.obs.parse.stationsList (args.excludeList, ['NOSID'])
+
     for m in master:
-        #print '[debug]: m=', m
+        badid = False
+        nosid = float(m[query.index('NOSID')])
+        for e in exclud:
+            if nosid == float(e[query.index('NOSID')]):
+                print '[warn]: station ',nosid,' is in exclude list.'
+                badid = True
         xd = float(m[query.index('Lon')])
         yd = float(m[query.index('Lat')])
         zd = m[query.index(args.nDays)]
-        if not zd=='nan' and xlim[0] <= xd and xd <= xlim[1] and ylim[0] <= yd and yd <= ylim[1]:
+        if not badid and not zd=='nan' and xlim[0] <= xd and xd <= xlim[1] and ylim[0] <= yd and yd <= ylim[1]:
             xo.append(xd)
             yo.append(yd)
             zo.append(float(zd))
@@ -104,7 +115,7 @@ def interpolate_offset(argv):
         Zfull  = 0.    # Depths where the solution is fully untapered 
         Znull  = 200.  # Depths where the solution is fully tapered 
         Pow    = 2.0   # Interpolation power
-        Radius = 2.0   # Proximity radius, in degrees
+        Radius = 2.5   # Proximity radius, in degrees
     
         #Interpolate on the continental shelf
         iShelf = np.where ( grid['depth'] < Znull )[0]
