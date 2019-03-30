@@ -25,5 +25,5 @@ export ftpLogin="svinogradov@emcrzdm"
 export ftpPath="/home/www/polar/estofs/offset/"
 
 cd ${tmpDir}
-PYTHONPATH=${myModules} ${pyPath}/python -W ignore ${pythonCode} -d ${NDAYS} -i ${inputFile} -e ${excludeList} -o ${outputFile} -c ${pltCfgFile} -t ${tmpDir} -u ${ftpLogin} -f ${ftpPath} # > ${logFile}
+PYTHONPATH=${myModules} ${pyPath}/python -W ignore ${pythonCode} -d ${NDAYS} -i ${inputFile} -e ${excludeList} -o ${outputFile} -c ${pltCfgFile} -t ${tmpDir} -u ${ftpLogin} -f ${ftpPath} > ${logFile}
 

@@ -14,6 +14,7 @@ export logFile=${platform}"/gpfs/hps3/nos/noscrub/polar/offset/interp.mic.log"
 
 export NDAYS=${1:-2} # 2 days averaging by default. Change it to 1 to 7 if need be. 
 export inputFile=${platform}"/gpfs/hps3/nos/noscrub/polar/offset/latest_coops.csv"
+export excludeList=${platform}"/gpfs/hps3/nos/noscrub/polar/offset/exclude_stations.csv"
 export gridFile="ftp://ocsftp.ncd.noaa.gov/estofs/mic/fort.14"
 export outputFile=${platform}"/gpfs/hps3/nos/noscrub/polar/offset/mic/estofs.mic.offset.63"
 export tmpDir=${platform}"/gpfs/hps3/nos/noscrub/tmp/offset/mic"
@@ -22,5 +23,5 @@ export ftpLogin="svinogradov@emcrzdm"
 export ftpPath="/home/ftp/polar/estofs/offset/"
 
 cd ${tmpDir}
-PYTHONPATH=${myModules} ${pyPath}/python -W ignore ${pythonCode} -d ${NDAYS} -i ${inputFile} -o ${outputFile} -g ${gridFile} -t ${tmpDir} -u ${ftpLogin} -f ${ftpPath} > ${logFile}
+PYTHONPATH=${myModules} ${pyPath}/python -W ignore ${pythonCode} -d ${NDAYS} -i ${inputFile} -e ${excludeList} -o ${outputFile} -g ${gridFile} -t ${tmpDir} -u ${ftpLogin} -f ${ftpPath} > ${logFile}
 
