@@ -5,10 +5,29 @@
 """
 import csdlpy
 import numpy as np
+import os, sys
 import matplotlib
 matplotlib.use('Agg',warn=False)
 import matplotlib.pyplot as plt
+import argparse
 
+#==============================================================================
+def read_cmd_argv (argv):
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('-d','--nDays',          required=True)
+    parser.add_argument('-i','--inputFile',      required=True)
+    parser.add_argument('-c','--pltCfgFile',     required=True)
+    parser.add_argument('-t','--tmpDir',         required=True)
+    parser.add_argument('-u','--ftpLogin',       required=True)
+    parser.add_argument('-f','--ftpPath',        required=True)
+
+    args = parser.parse_args()
+    print '[info]: offset/plot.py is configured with :', args
+    return args
+
+#=====================================================================
 def surface(offset, grid, coast, pp, mapTitle, mapFile):
 
     # Default plotting limits, based on advisory track, first position
@@ -41,10 +60,60 @@ def surface(offset, grid, coast, pp, mapTitle, mapFile):
     plt.plot(lonmax, latmax, 'ow',markerfacecolor='k',markersize=8)
     plt.plot(lonmax, latmax, 'ow',markerfacecolor='r',markersize=4)
     plt.text (lonmax+0.05,latmax+0.05, str(np.round(maxmax,1)),color='k',fontsize=6)
-
+    
     #plt.title(datespan,fontsize=8)
     if mapTitle is not None:
         plt.title(mapTitle, fontsize=7) 
     plt.savefig(mapFile)
     plt.close()   
 
+#=====================================================================
+def biases(argv):
+
+    #Receive command line arguments
+    args = read_cmd_argv(argv)
+
+    #Read config file 
+    pp = csdlpy.plotter.read_config_ini (args.pltCfgFile)
+
+    #Get the files
+    coastlineFile = os.path.join(args.tmpDir,'coastline.dat')
+
+    csdlpy.transfer.download ( pp['Coastline']['url'], coastlineFile)
+    coast  = csdlpy.plotter.readCoastline(coastlineFile)
+    xlim = (float(pp['Limits']['lonmin']), float(pp['Limits']['lonmax']))
+    ylim = (float(pp['Limits']['latmin']), float(pp['Limits']['latmax']))
+
+    #Read bias table
+    xo = []
+    yo = []
+    zo = []
+    query = ['NOSID', 'NWSID', 'Lon', 'Lat', '7','6','5','4','3','2','1']
+    if args.nDays == '0':
+        query = ['NOSID', 'NWSID', 'Lon', 'Lat', '0']
+    print '[info]: Reading WL anomalies from ', args.inputFile
+    master = csdlpy.obs.parse.stationsList (args.inputFile,   query)
+
+    for m in master:
+        xo.append( float(m[query.index('Lon')]) )
+        yo.append( float(m[query.index('Lat')]) )
+        zo.append( float(m[query.index(args.nDays)]) )
+    print '[info]: data points selected within the grid coverage : ' + str(len(xo))
+
+    with open(args.inputFile) as f:
+        first_line = f.readline()
+    valid = first_line.split(',')[-2].strip()
+    print '[info]: valid ', valid
+    csdlpy.plotter.plotMap (xo,yo,fig_w=16.0,lonlim=xlim,latlim=ylim, coast=coast)
+    csdlpy.plotter.addTriangles((xo,yo,zo))
+
+    string='MEAN WL ANOMALIES (IN METERS MSL) AVERAGED OVER ' + str(args.nDays) + ' UTC DAYS PRIOR TO ' + valid[-9:]
+    plt.text(-120, -15, string)
+    plotFile = os.path.join(args.tmpDir, 'map-biases-' + str(args.nDays).zfill(3) +'days.png')
+    csdlpy.plotter.save    ('NOAA / NATIONAL OCEAN SERVICE ACTIVE STATIONS', plotFile )
+
+    csdlpy.transfer.upload(plotFile, args.ftpLogin, args.ftpPath)
+
+#=====================================================================
+if __name__ == "__main__":
+    biases (sys.argv[1:])
